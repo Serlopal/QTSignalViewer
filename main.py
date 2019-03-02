@@ -3,6 +3,7 @@
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import pyqtSignal
+from yahoo_fin import stock_info as si
 
 import pyqtgraph as pg
 import numpy as np
@@ -13,10 +14,8 @@ import collections
 class SignalViewer(QApplication):
 	emitter_signal = pyqtSignal(object)
 
-	def __init__(self, feeder, num_signals):
+	def __init__(self, num_signals):
 		super().__init__([])
-		# save feeder function to generate or fetch data to be plot
-		self.feeder = feeder
 		# save number of signals
 		self.nplots = num_signals
 		# set number of samples to be displayed per signal at a time
@@ -36,8 +35,6 @@ class SignalViewer(QApplication):
 			c = pg.PlotCurveItem(pen=(i, self.nplots * 1.3))
 			self.p.addItem(c)
 			self.curves.append(c)
-		# launch feeder thread
-		self.start_feeder()
 
 	def update(self, data):
 		# update buffer
@@ -46,16 +43,6 @@ class SignalViewer(QApplication):
 		for i in range(self.nplots):
 			self.curves[i].setData(self.buff[i])
 
-	def feeder_emitter(self):
-		while True:
-			time.sleep(0.033)
-			data = self.feeder()
-			self.emitter_signal.emit(data)
-
-	def start_feeder(self):
-		feeder_thread = Thread(target=self.feeder_emitter)
-		feeder_thread.start()
-
 	def start(self):
 		self.window.show()
 		self.exec_()
@@ -63,12 +50,16 @@ class SignalViewer(QApplication):
 	def update_signals(self, values):
 		self.emitter_signal.emit(values)
 
-def feed_data():
-	return np.random.normal(size=10)
+def start_feeder():
+	while True:
+		time.sleep(0.033)
+		viewer.emitter_signal.emit(np.random.beta(1, 0.1, size=1))
 
 if __name__ == "__main__":
-
-	feeder = feed_data
-	viewer = SignalViewer(feeder=feed_data, num_signals=10)
+	viewer = SignalViewer(num_signals=1)
+	# launch feeder thread
+	feeder_thread = Thread(target=start_feeder)
+	feeder_thread.start()
+	# start UI
 	viewer.start()
 
